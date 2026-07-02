@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our July Expenses</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --paper:#EDE6D6;
+    --paper-line:#C9BFA6;
+    --ink:#1E2A3A;
+    --ink-soft:#5B6472;
+    --green:#1F6F50;
+    --green-deep:#164F39;
+    --stamp:#B4472B;
+    --card:#F6F2E8;
+    --white:#FFFDF8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 2.1em;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 16px;}
+
+  header{
+    padding:28px 16px 18px;
+    text-align:center;
+    position:relative;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  h1{
+    font-family:'Roboto Slab',serif;
+    font-weight:700;
+    font-size:30px;
+    margin:4px 0 2px;
+    color:var(--ink);
+  }
+  .sub{font-size:13px;color:var(--ink-soft);}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    box-shadow:0 1px 0 var(--paper-line), 0 8px 18px -14px rgba(30,42,58,.4);
+    padding:18px;
+    margin-bottom:16px;
+  }
+
+  .date-stamp{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--stamp);
+    border:1.5px solid var(--stamp);
+    border-radius:3px;
+    padding:3px 10px;
+    transform:rotate(-2deg);
+    margin-bottom:14px;
+    letter-spacing:.03em;
+  }
+
+  label{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  .field{margin-bottom:14px;}
+
+  .amount-row{display:flex;align-items:baseline;gap:6px;}
+  .rupee{font-family:'IBM Plex Mono',monospace;font-size:24px;color:var(--green-deep);font-weight:600;}
+  input[type=number]{
+    flex:1;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px;
+    font-weight:600;
+    border:none;
+    border-bottom:2px solid var(--paper-line);
+    background:transparent;
+    color:var(--ink);
+    padding:4px 2px;
+    width:100%;
+    outline:none;
+  }
+  input[type=number]:focus{border-bottom-color:var(--green);}
+
+  input[type=text]{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    border:none;
+    border-bottom:1.5px solid var(--paper-line);
+    background:transparent;
+    padding:8px 2px;
+    color:var(--ink);
+    outline:none;
+  }
+  input[type=text]:focus{border-bottom-color:var(--green);}
+  input[type=text]::placeholder{color:#a9a08a;}
+
+  .chips{display:flex;gap:8px;}
+  .chip{
+    flex:1;
+    text-align:center;
+    padding:10px 8px;
+    border:1.5px solid var(--paper-line);
+    border-radius:4px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--ink-soft);
+    background:var(--white);
+    transition:all .12s ease;
+    user-select:none;
+  }
+  .chip.active.essential{background:var(--green);border-color:var(--green);color:#fff;}
+  .chip.active.extra{background:var(--stamp);border-color:var(--stamp);color:#fff;}
+
+  .add-btn{
+    width:100%;
+    margin-top:6px;
+    padding:14px;
+    border:none;
+    border-radius:4px;
+    background:var(--ink);
+    color:var(--white);
+    font-family:'Roboto Slab',serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .add-btn:active{background:var(--green-deep);}
+  .add-btn:disabled{background:#b7b0a0;cursor:not-allowed;}
+
+  .toast{
+    position:fixed;
+    bottom:24px;left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink);
+    color:var(--white);
+    padding:10px 20px;
+    border-radius:30px;
+    font-size:13px;
+    opacity:0;
+    transition:all .25s ease;
+    pointer-events:none;
+    font-family:'Inter',sans-serif;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .section-title{
+    font-family:'Roboto Slab',serif;
+    font-size:15px;
+    font-weight:700;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:10px;
+  }
+  .section-title .count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);font-weight:500;}
+
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px dashed var(--paper-line);
+  }
+  .entry:last-child{border-bottom:none;}
+  .entry-left{flex:1;min-width:0;}
+  .entry-desc{font-size:14px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .entry-tag{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:1px 6px;
+    border-radius:2px;
+    margin-top:3px;
+  }
+  .entry-tag.essential{background:rgba(31,111,80,.12);color:var(--green-deep);}
+  .entry-tag.extra{background:rgba(180,71,43,.12);color:var(--stamp);}
+  .entry-amt{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:15px;
+    margin-left:12px;
+    white-space:nowrap;
+  }
+  .entry-del{
+    background:none;border:none;color:#b0a894;font-size:16px;cursor:pointer;padding:2px 6px;margin-left:4px;
+  }
+
+  .day-group{margin-bottom:6px;}
+  .day-header{
+    display:flex;justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--ink-soft);
+    padding:8px 0 4px;
+    border-top:1px solid var(--paper-line);
+    margin-top:8px;
+  }
+  .day-header:first-child{border-top:none;margin-top:0;}
+  .day-total{font-weight:600;color:var(--ink);}
+
+  .empty{
+    text-align:center;
+    padding:30px 10px;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
+
+  .stats-row{display:flex;gap:10px;}
+  .stat{
+    flex:1;
+    background:var(--white);
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    padding:12px;
+    text-align:center;
+  }
+  .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:4px;}
+  .stat-val{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:17px;}
+  .stat.essential .stat-val{color:var(--green-deep);}
+  .stat.extra .stat-val{color:var(--stamp);}
+
+  .export-btn{
+    width:100%;
+    padding:13px;
+    border:1.5px solid var(--green-deep);
+    border-radius:4px;
+    background:transparent;
+    color:var(--green-deep);
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  .export-btn:active{background:var(--green);color:#fff;}
+
+  .month-select{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    border:1px solid var(--paper-line);
+    background:var(--white);
+    padding:5px 8px;
+    border-radius:3px;
+    color:var(--ink);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Household Ledger</div>
+    <h1>Our July Expenses</h1>
+    <div class="sub">Fill it once, export it whole.</div>
+  </header>
+
+  <div id="storageWarning" style="display:none;background:#f4e3d3;border:1px solid var(--stamp);color:var(--stamp);font-size:12px;padding:8px 12px;border-radius:4px;margin-bottom:14px;text-align:center;">
+    Entries won't be saved after you close this — export to Excel before leaving.
+  </div>
+
+  <div class="card">
+    <div class="date-stamp" id="dateStamp">◆ TODAY</div>
+    <div class="field">
+      <label>Amount</label>
+      <div class="amount-row">
+        <span class="rupee">₹</span>
+        <input type="number" id="amount" placeholder="0" inputmode="decimal">
+      </div>
+    </div>
+    <div class="field">
+      <label>What was it for</label>
+      <input type="text" id="desc" placeholder="e.g. Onions, tea, auto fare...">
+    </div>
+    <div class="field">
+      <label>Type</label>
+      <div class="chips">
+        <div class="chip active essential" data-cat="Essential" id="chipEss">Essential</div>
+        <div class="chip extra" data-cat="Extra" id="chipExt">Extra</div>
+      </div>
+    </div>
+    <button class="add-btn" id="addBtn">+ Add entry</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      This month
+      <select class="month-select" id="monthSelect"></select>
+    </div>
+    <div class="stats-row" style="margin-bottom:14px;">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-val" id="statTotal">₹0</div></div>
+      <div class="stat essential"><div class="stat-label">Essential</div><div class="stat-val" id="statEss">₹0</div></div>
+      <div class="stat extra"><div class="stat-label">Extra</div><div class="stat-val" id="statExt">₹0</div></div>
+    </div>
+    <button class="export-btn" id="exportBtn">⬇ Export month as Excel</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Entries<span class="count" id="entryCount"></span></div>
+    <div id="entryList"><div class="empty">No entries yet — add your first one above.</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'kharcha_entries';
+let entries = [];
+let selectedCat = 'Essential';
+let storageWorks = true;
+
+function withTimeout(promise, ms=2000){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))
+  ]);
+}
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function todayLabel(){
+  const d = new Date();
+  return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+}
+document.getElementById('dateStamp').textContent = '◆ ' + todayLabel().toUpperCase();
+
+function fmt(n){ return '₹' + Number(n).toLocaleString('en-IN'); }
+
+async function loadEntries(){
+  try{
+    if(!window.storage) throw new Error('no storage');
+    const res = await withTimeout(window.storage.get(STORAGE_KEY, false));
+    entries = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    entries = [];
+    storageWorks = false;
+    document.getElementById('storageWarning').style.display = 'block';
+  }
+  render();
+}
+
+async function saveEntries(){
+  if(!storageWorks || !window.storage) return;
+  try{
+    await withTimeout(window.storage.set(STORAGE_KEY, JSON.stringify(entries), false));
+  }catch(e){
+    storageWorks = false;
+    showToast('Saved on screen — persistence unavailable here');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+document.getElementById('chipEss').onclick = () => setCat('Essential');
+document.getElementById('chipExt').onclick = () => setCat('Extra');
+function setCat(cat){
+  selectedCat = cat;
+  document.getElementById('chipEss').classList.toggle('active', cat==='Essential');
+  document.getElementById('chipExt').classList.toggle('active', cat==='Extra');
+}
+
+document.getElementById('addBtn').onclick = () => {
+  const amtEl = document.getElementById('amount');
+  const descEl = document.getElementById('desc');
+  const amt = parseFloat(amtEl.value);
+  const desc = descEl.value.trim();
+  if(!amt || amt<=0){ showToast('Enter an amount'); amtEl.focus(); return; }
+  if(!desc){ showToast('Add a short description'); descEl.focus(); return; }
+
+  entries.push({
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    date: todayISO(),
+    desc: desc,
+    amount: amt,
+    category: selectedCat
+  });
+  amtEl.value=''; descEl.value=''; setCat('Essential');
+  showToast('Added ✓');
+  render();
+  saveEntries(); // fire and forget — never blocks the UI
+};
+
+document.getElementById('entryList').addEventListener('click', (e)=>{
+  if(e.target.classList.contains('entry-del')){
+    const id = e.target.dataset.id;
+    entries = entries.filter(x=>x.id!==id);
+    render();
+    saveEntries();
+  }
+});
+
+document.getElementById('monthSelect').addEventListener('change', render);
+
+function monthsAvailable(){
+  const set = new Set(entries.map(e=>e.date.slice(0,7)));
+  set.add(todayISO().slice(0,7));
+  return Array.from(set).sort().reverse();
+}
+function monthLabel(ym){
+  const [y,m] = ym.split('-');
+  return new Date(y, m-1, 1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+}
+
+function render(){
+  const sel = document.getElementById('monthSelect');
+  const months = monthsAvailable();
+  const prevVal = sel.value;
+  sel.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  sel.value = months.includes(prevVal) ? prevVal : months[0];
+  const ym = sel.value;
+
+  const monthEntries = entries.filter(e=>e.date.slice(0,7)===ym);
+  const total = monthEntries.reduce((s,e)=>s+e.amount,0);
+  const ess = monthEntries.filter(e=>e.category==='Essential').reduce((s,e)=>s+e.amount,0);
+  const ext = monthEntries.filter(e=>e.category==='Extra').reduce((s,e)=>s+e.amount,0);
+  document.getElementById('statTotal').textContent = fmt(total);
+  document.getElementById('statEss').textContent = fmt(ess);
+  document.getElementById('statExt').textContent = fmt(ext);
+  document.getElementById('entryCount').textContent = monthEntries.length ? `${monthEntries.length} entries` : '';
+
+  const list = document.getElementById('entryList');
+  if(monthEntries.length===0){
+    list.innerHTML = '<div class="empty">No entries yet for this month.</div>';
+    return;
+  }
+  const byDate = {};
+  monthEntries.forEach(e=>{ (byDate[e.date] = byDate[e.date]||[]).push(e); });
+  const dates = Object.keys(byDate).sort().reverse();
+  list.innerHTML = dates.map(d=>{
+    const dayEntries = byDate[d].slice().reverse();
+    const dayTotal = dayEntries.reduce((s,e)=>s+e.amount,0);
+    const dLabel = new Date(d).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+    return `<div class="day-group">
+      <div class="day-header"><span>${dLabel}</span><span class="day-total">${fmt(dayTotal)}</span></div>
+      ${dayEntries.map(e=>`
+        <div class="entry">
+          <div class="entry-left">
+            <div class="entry-desc">${escapeHtml(e.desc)}</div>
+            <span class="entry-tag ${e.category.toLowerCase()}">${e.category}</span>
+          </div>
+          <div class="entry-amt">${fmt(e.amount)}</div>
+          <button class="entry-del" data-id="${e.id}">✕</button>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+document.getElementById('exportBtn').onclick = () => {
+  const ym = document.getElementById('monthSelect').value;
+  const monthEntries = entries.filter(e=>e.date.slice(0,7)===ym).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(monthEntries.length===0){ showToast('Nothing to export'); return; }
+
+  const rows = monthEntries.map(e=>({Date:e.date, Item:e.desc, 'Amount (Rs)':e.amount, Category:e.category}));
+  const total = monthEntries.reduce((s,e)=>s+e.amount,0);
+  rows.push({Date:'', Item:'TOTAL', 'Amount (Rs)':total, Category:''});
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:32},{wch:14},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Daily Log');
+  XLSX.writeFile(wb, `Our_July_Expenses_${ym}.xlsx`);
+  showToast('Excel downloaded');
+};
+
+loadEntries();
+</script>
+</body>
+</html>
